@@ -343,47 +343,36 @@ The checkout `status` field indicates the current phase of the session and
 determines what processing is required next. The business sets the status; the
 platform receives messages indicating what's needed to progress.
 
-```text
-       +------------+                         +---------------------+
-       | incomplete |<----------------------->| requires_escalation |
-       +-----+------+                         |   (buyer handoff    |
-    all info | ^                              |  via continue_url)  |
-   collected | |                              +----+-----------+----+
-             | | Update Checkout, or               ^            |
-             v | Complete Checkout (recoverable)   |            |
-    +------------------+                           |            |
-    |ready_for_complete|---------------------------+            |
-    |                  |    Complete Checkout                   |
-    | (platform can    |    (escalation needed)                 |
-    | call Complete    |                                        |
-    |   Checkout)      |                                        |
-    +--------+---------+                                        |
-             |                                                  |
-             | Complete Checkout                                |
-             v                                                  |
-   +--------------------+                                       |
-   |complete_in_progress|                                       | continue_url
-   +---------+----------+                                       |
-             |                                                  |
-             +-----------------------+--------------------------+
-                                     v
-                               +-------------+
-                               |  completed  |
-                               +-------------+
+```mermaid
+stateDiagram-v2
+    [*] --> incomplete
 
-                               +-------------+
-                               |  canceled   |
-                               +-------------+
-          (session invalid/expired - can occur from any state)
+    incomplete --> requires_escalation
+    requires_escalation --> incomplete
+
+    incomplete --> ready_for_complete: all info collected
+
+    ready_for_complete --> complete_in_progress: Complete Checkout
+    ready_for_complete --> completed: synchronous
+
+    complete_in_progress --> completed
+    complete_in_progress --> requires_escalation: continue_url
+
+    requires_escalation --> completed: continue_url
+
+    incomplete --> canceled
+    requires_escalation --> canceled
+    ready_for_complete --> canceled
+    complete_in_progress --> canceled
+
+    completed --> [*]
+    canceled --> [*]
+
+    note right of canceled
+        Session invalid/expired.
+        Can occur from any state.
+    end note
 ```
-
-> **Note:** Three transitions are omitted from the diagram above for
-> readability: `ready_for_complete` can resolve directly to `completed` when
-> Complete Checkout finishes synchronously, without passing through
-> `complete_in_progress`. Separately, `complete_in_progress` can also resolve
-> via Buyer handoff (`continue_url`) when an outstanding Action's fallback is
-> exhausted, or via cancellation per the race scenario described in
-> [Accepted completion](#accepted-completion) below.
 
 ### Status Values
 
