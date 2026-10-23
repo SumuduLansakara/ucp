@@ -347,30 +347,25 @@ platform receives messages indicating what's needed to progress.
 stateDiagram-v2
     [*] --> incomplete
 
-    incomplete --> requires_escalation
-    requires_escalation --> incomplete
+    incomplete --> requires_escalation: buyer handoff
+    requires_escalation --> incomplete: recoverable update
 
     incomplete --> ready_for_complete: all info collected
+    ready_for_complete --> incomplete: Update / Complete (recoverable)
 
-    ready_for_complete --> complete_in_progress: Complete Checkout
-    ready_for_complete --> completed: synchronous
+    ready_for_complete --> requires_escalation: Complete Checkout (escalation)
+    ready_for_complete --> complete_in_progress: Complete Checkout (async)
+    ready_for_complete --> completed: Complete Checkout (sync)
 
-    complete_in_progress --> completed
     complete_in_progress --> requires_escalation: continue_url
+    complete_in_progress --> completed
 
     requires_escalation --> completed: continue_url
 
-    incomplete --> canceled
-    requires_escalation --> canceled
-    ready_for_complete --> canceled
-    complete_in_progress --> canceled
-
-    completed --> [*]
-    canceled --> [*]
-
+    canceled
     note right of canceled
-        Session invalid/expired.
-        Can occur from any state.
+        Session invalid/expired
+        (from any active state)
     end note
 ```
 
